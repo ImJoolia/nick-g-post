@@ -6,12 +6,12 @@
 //  but data only lives in this browser. Great for trying it out.
 // ─────────────────────────────────────────────────────────────
 export const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyC8xbPJ7M7ftMhOiIGm0ZoRoWhA0gHsWU8",
+  authDomain: "nick-g-post.firebaseapp.com",
+  projectId: "nick-g-post",
+  storageBucket: "nick-g-post.firebasestorage.app",
+  messagingSenderId: "921187562560",
+  appId: "1:921187562560:web:0372e7210f58b8d2c61ba5"
 };
 
 // ─────────────────────────────────────────────────────────────
