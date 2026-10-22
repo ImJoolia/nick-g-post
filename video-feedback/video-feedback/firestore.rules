@@ -1,0 +1,77 @@
+rules_version = '2';
+
+// Paste this whole file into Firebase console → Firestore Database → Rules → Publish.
+// Replace PASTE_YOUR_UID_HERE with your editor account's UID (shown on admin.html after you log in).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.uid == 'PASTE_YOUR_UID_HERE';
+    }
+    function signedIn() { return request.auth != null; }
+    function videoVisible(v) {
+      return get(/databases/$(database)/documents/videos/$(v)).data.visible == true;
+    }
+    function validNote(d) {
+      return d.start is number && d.start >= 0
+        && (d.end == null || (d.end is number && d.end > d.start))
+        && d.text is string && d.text.size() > 0 && d.text.size() <= 5000
+        && d.name is string && d.name.size() <= 80
+        && d.photoCount is int && d.photoCount >= 0 && d.photoCount <= 30;
+    }
+
+    // Page title + welcome text
+    match /settings/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /videos/{v} {
+      // Clients only see videos switched to "Shown to client"
+      allow read: if isAdmin() || resource.data.visible == true;
+      allow write: if isAdmin();
+
+      match /notes/{n} {
+        allow read: if isAdmin() || (signedIn() && videoVisible(v));
+
+        // Clients can add notes, but can't mark them done or write replies
+        allow create: if isAdmin() || (
+          signedIn() && videoVisible(v) && validNote(request.resource.data)
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.done == false
+          && request.resource.data.reply == ''
+          && request.resource.data.keys().hasOnly(
+               ['start', 'end', 'text', 'name', 'authorUid', 'photoCount', 'done', 'reply', 'createdAt', 'updatedAt'])
+        );
+
+        // Clients can edit/move their own notes until you check them off
+        allow update: if isAdmin() || (
+          signedIn() && resource.data.authorUid == request.auth.uid && resource.data.done == false
+          && validNote(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['start', 'end', 'text', 'name', 'photoCount', 'updatedAt'])
+        );
+
+        allow delete: if isAdmin() || (
+          signedIn() && resource.data.authorUid == request.auth.uid && resource.data.done == false
+        );
+
+        // Photos are stored as compressed images right in the database (works on the free plan)
+        match /photos/{p} {
+          allow read: if isAdmin() || (signedIn() && videoVisible(v));
+          allow create: if isAdmin() || (
+            signedIn() && videoVisible(v)
+            && get(/databases/$(database)/documents/videos/$(v)/notes/$(n)).data.authorUid == request.auth.uid
+            && request.resource.data.data is string
+            && request.resource.data.data.size() < 1000000
+          );
+          allow delete: if isAdmin() || (
+            signedIn()
+            && get(/databases/$(database)/documents/videos/$(v)/notes/$(n)).data.authorUid == request.auth.uid
+          );
+        }
+      }
+    }
+  }
+}

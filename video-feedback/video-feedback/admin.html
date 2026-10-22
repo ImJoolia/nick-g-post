@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Editor — Video Feedback</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="preload" href="fonts/the-inquisition.woff" as="font" type="font/woff" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="admin">
+  <div id="demo-banner" class="demo-banner" hidden>Demo mode — any email + password logs in. Data saves to this browser only until Firebase is connected.</div>
+
+  <!-- Login -->
+  <section id="login" class="login" hidden>
+    <form id="login-form" class="login-card">
+      <p class="eyebrow">Editor</p>
+      <h1>Sign in</h1>
+      <label>Email <input id="l-email" type="email" autocomplete="username" required></label>
+      <label>Password <input id="l-pass" type="password" autocomplete="current-password" required></label>
+      <button class="btn primary wide" type="submit">Sign in</button>
+      <p id="l-err" class="err" hidden></p>
+    </form>
+  </section>
+
+  <!-- Signed in, but not the editor account -->
+  <section id="not-admin" class="login" hidden>
+    <div class="login-card">
+      <p class="eyebrow">Almost there</p>
+      <h1>Finish setup</h1>
+      <p>You're signed in, but this account isn't set as the editor yet. Copy your UID and paste it into <code>js/config.js</code> and <code>firestore.rules</code> (see the README).</p>
+      <div class="uid-box"><code id="my-uid"></code><button id="copy-uid" class="btn ghost small" type="button">Copy</button></div>
+      <button class="btn ghost wide" type="button" data-signout>Sign out</button>
+    </div>
+  </section>
+
+  <!-- Editor app -->
+  <div id="app" hidden>
+    <header class="admin-top">
+      <div class="admin-top-inner">
+        <div class="brand"><span class="dot"></span> Editor</div>
+        <div class="admin-top-actions">
+          <a id="view-client" class="btn ghost small" href="index.html" target="_blank" rel="noopener">View client page ↗</a>
+          <button id="copy-client" class="btn ghost small" type="button">Copy client link</button>
+          <button class="btn ghost small" type="button" data-signout>Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="admin-grid">
+      <aside class="side">
+        <button id="open-settings" class="side-item settings-item" type="button">⚙ Page title &amp; welcome</button>
+        <div class="side-head">
+          <h3>Videos</h3>
+          <button id="new-video" class="btn primary small" type="button">+ New</button>
+        </div>
+        <ul id="video-list" class="video-list"></ul>
+      </aside>
+
+      <main class="admin-main">
+        <!-- Site settings -->
+        <section id="settings-panel" class="card" hidden>
+          <h2>What the client sees at the top</h2>
+          <form id="settings-form" class="stack">
+            <label>Page title <input id="s-title" maxlength="120" placeholder="e.g. Acme Coffee — Spring Promo"></label>
+            <label>Welcome message <textarea id="s-welcome" rows="3" maxlength="1000" placeholder="Short instructions or a hello"></textarea></label>
+            <div class="row-end"><button class="btn primary" type="submit">Save</button></div>
+          </form>
+        </section>
+
+        <section id="no-video" class="card empty-card" hidden>
+          <h2>No videos yet</h2>
+          <p>Click <b>+ New</b> to add the first cut for your client.</p>
+        </section>
+
+        <!-- Video details -->
+        <section id="video-panel" hidden>
+          <form id="video-form" class="card stack">
+            <div class="card-head">
+              <h2 id="vf-heading">Video details</h2>
+              <label class="switch"><input id="v-visible" type="checkbox"><span></span> Shown to client</label>
+            </div>
+            <label>Title <input id="v-title" maxlength="120" required placeholder="e.g. Promo cut v2"></label>
+            <label>Video link
+              <input id="v-url" type="url" placeholder="YouTube, Vimeo, Google Drive, Dropbox or .mp4 link">
+              <small class="muted">YouTube / Vimeo / .mp4 let notes jump the video to the right spot. Use “Unlisted” on YouTube so it stays private.</small>
+            </label>
+            <div class="two">
+              <label>Video length
+                <span class="inline">
+                  <input id="v-duration" class="mono" placeholder="m:ss" inputmode="numeric">
+                  <button id="v-detect" type="button" class="btn ghost small">Detect</button>
+                </span>
+              </label>
+              <label>Order in list <input id="v-order" type="number" step="1" placeholder="1"></label>
+            </div>
+            <label>Message to client <textarea id="v-message" rows="2" maxlength="2000" placeholder="e.g. Round 2 — fixed the color grade and shortened the intro."></textarea></label>
+            <div class="row-split">
+              <button id="v-delete" type="button" class="btn ghost danger small">Delete video</button>
+              <span class="row-end">
+                <button id="v-copy" type="button" class="btn ghost small">Copy link to this video</button>
+                <button id="v-save" class="btn primary" type="submit">Save</button>
+              </span>
+            </div>
+          </form>
+
+          <div id="review-area">
+            <div class="card">
+              <div id="player"></div>
+              <div class="tl-card flat">
+                <div class="tl-card-head">
+                  <h3>Timeline</h3>
+                  <p class="hint">Drag any note to fix its time. Drag a section's ends to resize. Click the bar to add your own note.</p>
+                </div>
+                <div id="timeline"></div>
+              </div>
+            </div>
+
+            <section class="card">
+              <div class="check-head">
+                <div>
+                  <h2>Checklist</h2>
+                  <p id="progress-text" class="muted"></p>
+                </div>
+                <div class="filters">
+                  <button data-filter="all" class="on">All <span></span></button>
+                  <button data-filter="open">To do <span></span></button>
+                  <button data-filter="done">Done <span></span></button>
+                </div>
+              </div>
+              <div class="progress"><div id="progress-bar"></div></div>
+              <ol id="checklist" class="checklist"></ol>
+              <p id="check-empty" class="muted notes-empty" hidden>No feedback yet.</p>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>
