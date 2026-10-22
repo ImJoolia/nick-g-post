@@ -19,6 +19,6 @@ export const firebaseConfig = {
 //  Log in on admin.html once; the page shows your UID if it's not set.
 //  Paste it here AND in firestore.rules.
 // ─────────────────────────────────────────────────────────────
-export const ADMIN_UID = "";
+export const ADMIN_UID = "HEXRUwfmshRpa0Rv61w6JUQYSy53" "v8LbsgRjwFgNNFnWhXVs0IczvSQ2";
 
 export const DEMO_MODE = !firebaseConfig.apiKey;
